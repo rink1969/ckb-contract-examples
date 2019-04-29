@@ -33,12 +33,12 @@ exit
     privkey = "0x***"
     wallet = CKB::Wallet.from_hex(api, privkey)
     c = CKB::Contract.new(wallet)
-    c.deploy_contract("/path/to/debug_cell", "test", "0x#{"dead".unpack1('H*')}")
+    c.deploy_contract("/path/to/debug_cell", "test", ["0x#{"dead".unpack1('H*')}"])
     ```
 
 4. Setup contract. Create a cell with some capacity and lock it with debug_cell. First arg is name of contract. Seconed arg is capacity we want to lock.
     ```
-    prev_tx_hash = c.setup_contract("test", 10000, "0x#{"cafe".unpack1('H*')}", "0x")
+    prev_tx_hash = c.setup_contract("test", 10000, "0x", "0x#{"cafe".unpack1('H*')}")
     ```
 5. Call contract.
 Just send all capacity to a new cell which also locked with debug_cell.
@@ -63,29 +63,33 @@ We will see the args:
 Three people vote Yes/No, then summary result.
 
 ##### compile
-
+```
+docker run -it --rm -v `pwd`:/data  xxuejie/riscv-gnu-toolchain-rv64imac:latest bin/bash
+cd /data
+make vote
+```
 ##### run
 1. Setup wallet (use branch metioned above).
 
 2. Then miner for a while to get some capacity.
 
-3. Deploy contract. First arg is path of the elf file that we compiled. Seconed arg is name of the contract, we will use it later.
+3. Deploy contract. First arg is path of the elf file that we compiled.
     ```
     api = CKB::API.new
     privkey = "0x***"
     wallet = CKB::Wallet.from_hex(api, privkey)
     c = CKB::Contract.new(wallet)
     v = CKB::Vote.new(c)
-    v.deploy("/path/to/debug_cell", "0x#{wallet.pubkey[2..].unpack1('H*')}")
+    v.deploy("/path/to/vote", "0x#{wallet.blake160[2..].unpack1('H*')}")
     ```
 
 4. Publish contract info. In this demo, we use file to share it. Other people need call load_contracts.
     ```
     c.save_contracts
     ```
-5. Vote. Second argument is hex string. The empty string("0x") means No. The other value means Yes.
+5. Vote. Second argument is hex string. The empty string("0x") means No. The other value means Yes. The last two args is pubkey of voter and pubke of admin. Here they are same.
     ```
-    vote_hash = v.vote(200, "0xaa")
+    vote_hash = v.vote(200, "0xaa", "0x#{wallet.blake160[2..].unpack1('H*')}", "0x#{wallet.blake160[2..].unpack1('H*')}")
     ```
 6. Other people vote. Make sure the wallet have some capacity.
     ```
@@ -94,14 +98,14 @@ Three people vote Yes/No, then summary result.
     c1 = CKB::Contract.new(wallet1)
     c1.load_contracts
     v1 = CKB::Vote.new(c1)
-    vote1_hash = v1.vote(200, "0xbb")
+    vote1_hash = v1.vote(200, "0xbb", "0x#{wallet1.blake160[2..].unpack1('H*')}", "0x#{wallet.blake160[2..].unpack1('H*')}")
 
     privkey2 = "0x***"
     wallet2 = CKB::Wallet.from_hex(api, privkey2)
     c2 = CKB::Contract.new(wallet2)
     c2.load_contracts
     v2 = CKB::Vote.new(c2)
-    vote2_hash = v2.vote(200, "0x")
+    vote2_hash = v2.vote(200, "0x", "0x#{wallet2.blake160[2..].unpack1('H*')}", "0x#{wallet.blake160[2..].unpack1('H*')}")
     ```
 7. Summary. The data filed in output of tx is "0x0302", means total 3 votes and 2 is Yes.
     ```
