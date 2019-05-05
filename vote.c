@@ -19,7 +19,7 @@ arg[4] is witness[1] which is a signature
  */
 int main(int argc, char* argv[])
 {
-    int ret, len;
+    int ret;
 
     debug(argv[argc - 2]);
     debug(argv[argc - 1]);
@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
     ns(CellInput_vec_t) inputs = ns(Transaction_inputs(tx));
     size_t inputs_len = ns(CellInput_vec_len(inputs));
     for (int i = 0; i < inputs_len; i++) {
+        volatile uint64_t len = TEMP_BUFFER_SIZE;
         if (ckb_load_cell_by_field(g_buf, &len, 0, i, CKB_SOURCE_INPUT, CKB_CELL_FIELD_DATA) != CKB_SUCCESS) {
             return ERROR_LOAD_INPUT_DATA;
         }
@@ -69,6 +70,7 @@ int main(int argc, char* argv[])
 
     {
         char buf[32];
+        memset(buf, 0, 32);
         snprintf(buf, 32, "total %d yes %d", total, yes);
         debug(buf);
     }
@@ -78,7 +80,7 @@ int main(int argc, char* argv[])
     if (outputs_len > 1) {
         return ERROR_TOO_MANY_OUTPUT;
     }
-
+    volatile uint64_t len = TEMP_BUFFER_SIZE;
     if (ckb_load_cell_by_field(g_buf, &len, 0, 0, CKB_SOURCE_OUTPUT, CKB_CELL_FIELD_DATA) != CKB_SUCCESS) {
         return ERROR_LOAD_OUTPUT_DATA;
     }
