@@ -156,12 +156,14 @@ extern unsigned char g_hash[BLAKE2B_BLOCK_SIZE];
 extern char g_tx_buf[TX_BUFFER_SIZE];
 extern char g_buf[TEMP_BUFFER_SIZE];
 extern char g_addr[BLAKE160_SIZE];
+extern int g_verify_flag;
 
 #define INIT_GLOBAL_BUF \
 unsigned char g_hash[BLAKE2B_BLOCK_SIZE]; \
 char g_tx_buf[TX_BUFFER_SIZE]; \
 char g_buf[TEMP_BUFFER_SIZE]; \
-char g_addr[BLAKE160_SIZE];
+char g_addr[BLAKE160_SIZE]; \
+int g_verify_flag = 0;
 
 static int check_sighash_all(char * pk, char * sig)
 {
@@ -194,31 +196,32 @@ static int check_sighash_all(char * pk, char * sig)
     return ERROR_SECP_PARSE_SIGNATURE;
   }
 
-  volatile uint64_t tx_size = TX_BUFFER_SIZE;
-  if (ckb_load_tx(g_tx_buf, &tx_size, 0) != CKB_SUCCESS) {
+  if (g_verify_flag == 0) {
+    volatile uint64_t tx_size = TX_BUFFER_SIZE;
+    if (ckb_load_tx(g_tx_buf, &tx_size, 0) != CKB_SUCCESS) {
     return ERROR_LOAD_TX;
-  }
+    }
 
-  ns(Transaction_table_t) tx;
-  if (!(tx = ns(Transaction_as_root(g_tx_buf)))) {
+    ns(Transaction_table_t) tx;
+    if (!(tx = ns(Transaction_as_root(g_tx_buf)))) {
     return ERROR_PARSE_TX;
-  }
+    }
 
-  blake2b_init(&blake2b_ctx, BLAKE2B_BLOCK_SIZE);
+    blake2b_init(&blake2b_ctx, BLAKE2B_BLOCK_SIZE);
 
-  /* Hash all inputs */
-  ns(CellInput_vec_t) inputs = ns(Transaction_inputs(tx));
-  size_t inputs_len = ns(CellInput_vec_len(inputs));
-  for (int i = 0; i < inputs_len; i++) {
+    /* Hash all inputs */
+    ns(CellInput_vec_t) inputs = ns(Transaction_inputs(tx));
+    size_t inputs_len = ns(CellInput_vec_len(inputs));
+    for (int i = 0; i < inputs_len; i++) {
     ns(CellInput_table_t) input = ns(CellInput_vec_at(inputs, i));
     update_h256(&blake2b_ctx, ns(CellInput_hash(input)));
     update_uint32_t(&blake2b_ctx, ns(CellInput_index(input)));
-  }
+    }
 
-  /* Hash all outputs */
-  ns(CellOutput_vec_t) outputs = ns(Transaction_outputs(tx));
-  size_t outputs_len = ns(CellOutput_vec_len(outputs));
-  for (int i = 0; i < outputs_len; i++) {
+    /* Hash all outputs */
+    ns(CellOutput_vec_t) outputs = ns(Transaction_outputs(tx));
+    size_t outputs_len = ns(CellOutput_vec_len(outputs));
+    for (int i = 0; i < outputs_len; i++) {
     ns(CellOutput_table_t) output = ns(CellOutput_vec_at(outputs, i));
     update_uint64_t(&blake2b_ctx, ns(CellOutput_capacity(output)));
     volatile uint64_t len = TEMP_BUFFER_SIZE;
@@ -230,9 +233,12 @@ static int check_sighash_all(char * pk, char * sig)
     if (ckb_load_cell_by_field(g_buf, &len, 0, i, CKB_SOURCE_OUTPUT, CKB_CELL_FIELD_TYPE_HASH) == CKB_SUCCESS) {
       blake2b_update(&blake2b_ctx, g_buf, len);
     }
-  }
+    }
 
-  blake2b_final(&blake2b_ctx, g_hash, BLAKE2B_BLOCK_SIZE);
+    blake2b_final(&blake2b_ctx, g_hash, BLAKE2B_BLOCK_SIZE);
+
+    g_verify_flag = 1;
+  }
 
   ret = secp256k1_ecdsa_verify(&context, &signature, g_hash, &pubkey);
   if (ret != 1) {
