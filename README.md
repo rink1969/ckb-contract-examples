@@ -44,7 +44,7 @@ exit
 Just send all capacity to a new cell which also locked with debug_cell.
 Seconed arg is the prev tx hash. First time prev tx hash is tx hash of setup_contract, then prev tx hash is tx hash of prev call_contract.
     ```
-    prev_tx_hash = c.call_contract("test", prev_tx_hash, "0x#{"beef".unpack1('H*')}")
+    prev_tx_hash = c.call_contract("test", prev_tx_hash, ["0x#{"beef".unpack1('H*')}"])
     ```
 6. [Enable ckb debug log](https://github.com/nervosnetwork/ckb-demo-ruby#custom-log-config), we will see the debug log from script. 
 

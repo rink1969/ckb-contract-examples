@@ -11,6 +11,10 @@ char g_multi_sig_addr[MAX_MULTI_SIGNERS][BLAKE160_SIZE];
 #define ERROR_SUMMARY_LEN -62
 #define ERROR_SUMMARY -63
 #define ERROR_TOO_MANY_SIGNERS -64
+#define ERROR_LOAD_CONF_DATA -65
+#define ERROR_NO_PERMISSION -66
+#define ERROR_COUNT_WITNESSES -67
+#define ERROR_INVALID_CONF_DATA -67
 
 /*
 arg[0] is "verify"
@@ -25,12 +29,33 @@ int main(int argc, char* argv[])
 {
     int ret;
 
+    if (argc == 4) {
+        // voter want to modify the vote
+        // arg[1] is voter
+        // arg[2] pubkey
+        // arg[3] signature
+        ret = check_sighash_all(argv[2], argv[3]);
+        if (ret != CKB_SUCCESS) {
+            return ret;
+        }
+        if (hex_to_bin(g_buf, BLAKE160_SIZE, argv[1]) != BLAKE160_SIZE) {
+            return ERROR_PUBKEY_BLAKE160_HASH_LENGTH;
+        }
+        if (memcmp(g_buf, g_addr, BLAKE160_SIZE) == 0) {
+            return CKB_SUCCESS;
+        }
+        return ERROR_NO_PERMISSION;
+    }
+
     // read conf data which store in deps[1]
     {
         volatile uint64_t len = TEMP_BUFFER_SIZE;
         if (ckb_load_cell_by_field(g_buf, &len, 0, 1, CKB_SOURCE_DEP, CKB_CELL_FIELD_DATA) != CKB_SUCCESS) {
-          debug("???");
-          return ERROR_LOAD_OUTPUT_DATA;
+            return ERROR_LOAD_CONF_DATA;
+        }
+        int count = g_buf[0];
+        if (len != 2 + count * BLAKE160_SIZE) {
+            return ERROR_INVALID_CONF_DATA;
         }
     }
     int m = g_buf[0];
@@ -42,13 +67,17 @@ int main(int argc, char* argv[])
         memcpy(g_multi_sig_addr[i], &g_buf[2 + i * BLAKE160_SIZE], BLAKE160_SIZE);
     }
 
+    if (argc != 2 + 2 * m) {
+        return ERROR_COUNT_WITNESSES;
+    }
+
     // verify multi signature
     int ok_count = 0;
     for (int i = 0; i < m; i++) {
         debug(argv[argc - (2 + 2 * (m - i - 1))]);
         debug(argv[argc - (1 + 2 * (m - i - 1))]);
         ret = check_sighash_all(argv[argc - (2 + 2 * (m - i - 1))], argv[argc - (1 + 2 * (m - i - 1))]);
-        if ((ret != CKB_SUCCESS) && (memcmp(g_multi_sig_addr[i], g_addr, BLAKE160_SIZE) == 0)) {
+        if ((ret == CKB_SUCCESS) && (memcmp(g_multi_sig_addr[i], g_addr, BLAKE160_SIZE) == 0)) {
             ok_count += 1;
         }
     }
