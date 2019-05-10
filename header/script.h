@@ -168,6 +168,14 @@ static void update_out_point(blake2b_state *ctx, ns(OutPoint_table_t) outpoint)
   update_uint32_t(ctx, ns(OutPoint_index(outpoint)));
 }
 
+static void blake2b_hash(char * in_buf, int len, char * out_buf)
+{
+  blake2b_state blake2b_ctx;
+  blake2b_init(&blake2b_ctx, BLAKE2B_BLOCK_SIZE);
+  blake2b_update(&blake2b_ctx, in_buf, len);
+  blake2b_final(&blake2b_ctx, out_buf, BLAKE2B_BLOCK_SIZE);
+}
+
 int debug(const char* s)
 {
 #ifdef DEBUG
