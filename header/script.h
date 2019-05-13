@@ -96,7 +96,7 @@ static int hex_to_bin(char* buf, size_t buf_len, const char* hex)
 
 static int bin_to_hex(char* buf, size_t buf_len, const char* bin)
 {
-  int i = 0;
+  volatile int i = 0;
 
   for (; i < (buf_len - 1) / 2; i++) {
     int tmp = bin[i];
