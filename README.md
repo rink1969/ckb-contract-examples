@@ -4,18 +4,14 @@
 Toolchain for riscv64, there is a [docker image](https://hub.docker.com/r/xxuejie/riscv-gnu-toolchain-rv64imac).
 
 ## wallet
-[wallet](https://github.com/rink1969/ckb-sdk-ruby)
+[wallet](https://github.com/rink1969/ckb-sdk-ruby/tree/contract_examples)
 
 Please use branch contract_examples.
 
 This is a fork from NervosNetwork, add extra functions support contract development.
 
 ## ckb
-[ckb](https://github.com/rink1969/ckb)
-
-Please use branch contract_examples.
-
-This is a fork from NervosNetwork.
+Support v0.14.0.
 
 ## examples
 ### debug_cell
@@ -50,21 +46,25 @@ Just send all capacity to a new cell which also locked with debug_cell.
 Seconed arg is the prev tx hash. First time prev tx hash is tx hash of setup_contract, then prev tx hash is tx hash of prev call_contract.
    
     ```Ruby
-    prev_tx_hash = c.call_contract("test", prev_tx_hash, ["0xbeef"])
+    prev_tx_hash = c.call_contract("test", prev_tx_hash)
     ```
-6. [Enable ckb debug log](https://github.com/nervosnetwork/ckb-demo-ruby#custom-log-config), we will see the debug log from script. 
+6. Modify ckb.toml to enable ckb debug log, we will see the debug log from script.
+    ```toml
+    [logger]
+    filter = "info,ckb-script=debug"
+    ```
 
 ##### result
-We will see the args:
+We will see the output:
+```
+DEBUG OUTPUT: 7665
+DEBUG OUTPUT: cafe
+```
+It means args:
 
 0. arg\[0\] is "verify"
 1. arg\[1\] is "cafe" the output\[lock\]\[args\] which output point by input\[previous_output\]
 2. if the args include many arguments, they will be flattened here.
-3. arg\[2\] is "beef" input\[args\]
-4. same to 2.
-5. arg\[3\] is witness\[0\] which is a pubkey
-6. arg\[4\] is witness\[1\] which is a signature
-7. arg\[5\] is length of signature
 
 ### vote
 Three people vote Yes/No, then summary result.
